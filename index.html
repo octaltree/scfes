@@ -20,6 +20,12 @@
     #form .item [type=checkbox] {
       vertical-align: middle;
     }
+    #dest {
+      overflow-x: scroll;
+    }
+    table {
+      width: 1000000000px;
+    }
   </style>
 </head>
 <body>
@@ -37,6 +43,16 @@
     </span>
   </div>
   <div id="dest">
+    <table>
+      <tr>
+      </tr>
+      <tr>
+      </tr>
+      <tr>
+      </tr>
+      <tr>
+      </tr>
+    </table>
   </div>
   <script>
     var changed = null;
@@ -82,7 +98,25 @@
           req.name.some(n => n == c.name));
       }
       function render(cs){
-        console.log(cs);
+        const sorted = [].concat(cs).sort((a, b) => a.no - b.no);
+        const rows = [0, 1, 2, 3].map(a =>
+          sorted.filter((x, i) => i % 4 == a));
+        const hs = rows.map(r => r.map(c => {
+          let res = '';
+          res += '<div style="display: inline-block; vertical-align: top; scroll-behavior: unset;">';
+          res += '<div class="hvr-fade" style="position: relative; scroll-behavior: unset;">';
+          res += `<a href="${c.detail}" style="scroll-behavior: unset;">`;
+          res += '<div style="display: inline-block; width: 80px; overflow: hidden; white-space: nowrap; position: relative; scroll-behavior: unset;">';
+          res += `<div style="position: absolute; top: 0px; left: 0px; font-size: 12px; scroll-behavior: unset;">${c.rarity}</div>`;
+          res += `<div style="text-align: center; scroll-behavior: unset;"><img src="${c.thumb}" style="width: 75px; height: 75px; scroll-behavior: unset;"></div>`;
+          res += `<div style="font-size: 12px; text-align: center; scroll-behavior: unset;">No.${c.no}<br style="scroll-behavior: unset;">${c.skill}<br style="scroll-behavior: unset;">${c.name}</div>`;
+          res += '</div></a></div></div>';
+          return res;
+        }).join(''));
+        trs = Array.from(document.querySelectorAll('#dest tr'));
+        trs.forEach((tr, i) => {
+          tr.innerHTML = hs[i];
+        });
       }
       function formChanged(){
         ns = Array.from(document.querySelectorAll('#form input'));
