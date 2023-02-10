@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>画像一覧</title>
+  <style>
+    #form .rarity .item {
+      display: inline-block;
+    }
+    #form .name .item {
+      display: inline;
+    }
+    #form .name .item:nth-child(9n):after {
+      content: "\A";
+      white-space: pre;
+    }
+    #form .item label {
+      vertical-align: middle;
+    }
+    #form .item [type=checkbox] {
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <button onclick="Array.from(document.querySelectorAll('[type=checkbox]')).map(c => c.checked = true); changed()">check all</button>
+  <button onclick="Array.from(document.querySelectorAll('[type=checkbox]')).map(c => c.checked = false); changed()">uncheck all</button>
+  <div id="form">
+    <div class="rarity">
+      <div class="item"><label><input type="checkbox" name="N" checked="checked">N</label></div>
+      <div class="item"><label><input type="checkbox" name="R" checked="checked">R</label></div>
+      <div class="item"><label><input type="checkbox" name="SR" checked="checked">SR</label></div>
+      <div class="item"><label><input type="checkbox" name="SSR" checked="checked">SSR</label></div>
+      <div class="item"><label><input type="checkbox" name="UR" checked="checked">UR</label></div>
+    </div>
+    <span class="name">
+    </span>
+  </div>
+  <div id="dest">
+    <ul>
+    </ul>
+  </div>
+  <style>
+   ul{
+     display:flex;
+     flex-wrap:wrap;
+     list-style:none;
+     margin:0;
+     padding:0;
+   }
+   li{
+     width:512px;
+     height:720px;
+     line-height:520px;
+     margin:1%;
+     background:#c3c3c3;
+   }
+  </style>
+  <script>
+    var changed = null;
+    (function(){
+      (async function(){
+        const [_, raw] = await Promise.all(
+          [windowOnload(), get('/data/all.json')]);
+        const data = JSON.parse(raw);
+        makeForm(data);
+        while( true ){
+          const req = readForm();
+          const cs = filterCards(data, req);
+          render(cs);
+          await formChanged();
+        }
+      })();
+      function makeForm(data){
+        const count = data.map(c => c.name).reduce((s, x) => {
+          s[x] = (s[x] || 0) + 1;
+          return s;
+        }, {});
+        const ts = Object.keys(count).map(k => [k, count[k]])
+          .sort((a, b) => b[1] - a[1]);
+        const html = ts.map(t => t[0]).map(n =>
+          `<div class="item"><label><input type="checkbox" name="${n}">${n}</label></div>`)
+            .join('');
+        document.querySelector('#form .name').innerHTML = html;
+      }
+      function readForm(){
+        const find = s => Array.from(document.querySelectorAll(s));
+        const ischeck = s => find(s).map(c => [c.name, c.checked]);
+        const rarity = find('#form .rarity [type=checkbox]')
+          .map(c => [c.name, c.checked]);
+        const name = find('#form .name [type=checkbox]')
+          .map(c => [c.name, c.checked]);
+        return {
+          rarity: rarity.filter(t => t[1]).map(t => t[0]),
+          name: name.filter(t => t[1]).map(t => t[0])};
+      }
+      function filterCards(data, req){
+        return data.filter(c =>
+          req.rarity.some(r => r == c.rarity) &&
+          req.name.some(n => n == c.name));
+      }
+      function render(cs){
+        const suffix = '?1539587257';
+        const sorted = [].concat(cs).sort((a, b) => a.no - b.no);
+        const hs = [];
+        for(const c of sorted){
+          const id = c.detail.split('/').slice(-1)[0];
+          const img1 = `https://llsif.gamedbs.jp/images/gcard/${id}n.jpg${suffix}`;
+          const img2 = `https://llsif.gamedbs.jp/images/gcard/${id}r.jpg${suffix}`;
+          console.log(img1);
+          let res = '';
+          res += `<li><a href="${c.detail}">`;
+          res += `<img src="${img1}" width="520px">`;
+          res += '</a></li>';
+          res += `<li><a href="${c.detail}">`;
+          res += `<img src="${img2}" width="520px">`;
+          res += '</a></li>';
+          hs.push(res);
+        }
+        const ul = document.querySelector("#dest ul");
+        ul.innerHTML = hs.join("\n");
+      }
+      function formChanged(){
+        ns = Array.from(document.querySelectorAll('#form input'));
+        return new Promise(resolve => {
+          changed = () => {
+            resolve();
+            ns.forEach(i => i.removeEventListener('change', changed, false));
+          };
+          ns.forEach(i => i.addEventListener('change', changed, false));
+        });
+      }
+      function windowOnload(){
+        return  new Promise(resolve => {
+          const fire = () => {
+            resolve();
+            document.removeEventListener('DOMContentLoaded', fire, false);
+          };
+          document.addEventListener('DOMContentLoaded', fire, false);
+        });
+      }
+      function get(url){
+        return new Promise((resolve, reject) => {
+          let xhr = new XMLHttpRequest();
+          xhr.open('GET', url, true);
+          xhr.onload = () => {
+            if (xhr.readyState === 4 && xhr.status === 200) {
+              resolve(xhr.response);
+            } else {
+              reject(new Error(xhr.statusText));
+            } };
+          xhr.onerror = () => {
+            reject(new Error(xhr.statusText));
+          };
+          xhr.send(null);
+        });
+      }
+    })();
+  </script>
+</body>
+</html>
